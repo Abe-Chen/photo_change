@@ -1,0 +1,144 @@
+/* 关键点编辑器样式 */
+.keypoint-editor {
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+/* 工具栏样式 */
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 主编辑区域样式 */
+.editor-main {
+  display: flex;
+  gap: 20px;
+}
+
+/* 画布容器样式 */
+.canvas-container {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.canvas-container canvas {
+  display: block;
+  cursor: crosshair;
+}
+
+.canvas-container canvas.disabled {
+  cursor: not-allowed;
+}
+
+/* 关键点控制面板样式 */
+.keypoint-controls {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.keypoint-selector,
+.keypoint-position,
+.keypoint-info {
+  margin-bottom: 16px;
+}
+
+.keypoint-selector h4,
+.keypoint-position h4,
+.keypoint-info h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+/* 位置控制样式 */
+.position-control {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.position-control span {
+  width: 30px;
+  font-weight: bold;
+  color: #555;
+}
+
+.position-control .ant-slider {
+  flex: 1;
+}
+
+/* 关键点颜色标记 */
+.color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* 操作说明样式 */
+.keypoint-info ul {
+  padding-left: 20px;
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.keypoint-info li {
+  margin-bottom: 4px;
+}
+
+/* 响应式布局 */
+@media (max-width: 992px) {
+  .editor-main {
+    flex-direction: column;
+  }
+  
+  .keypoint-controls {
+    width: 100%;
+    margin-top: 16px;
+  }
+}
+
+/* 动画效果 */
+.ant-btn:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s;
+}
+
+/* 滑块样式优化 */
+.ant-slider-track {
+  background-color: #1890ff;
+}
+
+.ant-slider-handle {
+  border-color: #1890ff;
+}
