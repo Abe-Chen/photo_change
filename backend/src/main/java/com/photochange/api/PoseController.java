@@ -1,6 +1,7 @@
 package com.photochange.api;
 
 import com.photochange.model.*;
+import com.photochange.service.ExportService;
 import com.photochange.service.PoseDetectionService;
 import com.photochange.service.PoseTransformationService;
 import com.photochange.service.ImageStorageService;
@@ -32,6 +33,9 @@ public class PoseController {
 
     @Autowired
     private ImageStorageService imageStorageService;
+    
+    @Autowired
+    private ExportService exportService;
 
     /**
      * 上传图片
@@ -416,45 +420,16 @@ public class PoseController {
                         null, null, "failed", "变换任务ID不能为空", null));
             }
             
-            // 检查变换任务是否存在和完成
-            TransformationResult transformationResult = 
-                    poseTransformationService.getTransformationResult(request.getTransformationId());
-            
-            if (transformationResult == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ExportResponse(
-                        null, request.getTransformationId(), "failed", "变换任务不存在", null));
-            }
-            
-            if (!"completed".equals(transformationResult.getStatus())) {
-                return ResponseEntity.badRequest().body(new ExportResponse(
-                        null, request.getTransformationId(), "failed", 
-                        "变换任务尚未完成，当前状态: " + transformationResult.getStatus(), null));
-            }
-            
-            // 创建导出任务
-            String exportId = "exp_" + UUID.randomUUID().toString().replace("-", "");
-            
-            // 异步执行导出
-            imageStorageService.exportImageAsync(
-                    exportId,
-                    request.getTransformationId(),
-                    request.getFormat(),
-                    request.getQuality(),
-                    request.getWidth(),
-                    request.getHeight()
-            );
-            
-            // 构建响应
-            ExportResponse response = new ExportResponse(
-                    exportId,
-                    request.getTransformationId(),
-                    "processing",
-                    "导出任务已创建，正在处理中",
-                    5 // 预估处理时间（秒）
-            );
-            
+            // 调用导出服务创建导出任务
+            ExportResponse response = exportService.createExport(request);
             return ResponseEntity.ok(response);
             
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ExportResponse(
+                    null, request.getTransformationId(), "failed", e.getMessage(), null));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(new ExportResponse(
+                    null, request.getTransformationId(), "failed", e.getMessage(), null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ExportResponse(null, request.getTransformationId(), "failed", 
@@ -473,20 +448,88 @@ public class PoseController {
         
         try {
             // 获取导出结果
-            ExportResult result = imageStorageService.getExportResult(exportId);
-            
-            if (result == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ExportResult(exportId, null, "not_found", null, 
-                                null, null, null, null, null, null, null));
-            }
-            
+            ExportResult result = exportService.getExportResult(exportId);
             return ResponseEntity.ok(result);
             
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ExportResult(exportId, null, "not_found", e.getMessage(), 
+                            null, null, null, null, null, null, null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ExportResult(exportId, null, "error", null, null, null, 
                             null, null, null, null, "获取导出结果失败: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 取消导出任务
+     * @param exportId 导出任务ID
+     * @return 取消结果
+     */
+    @DeleteMapping("/exports/{exportId}")
+    public ResponseEntity<Map<String, Object>> cancelExport(
+            @PathVariable String exportId) {
+        
+        try {
+            boolean cancelled = exportService.cancelExport(exportId);
+            
+            if (cancelled) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "导出任务已取消"
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                        "success", false,
+                        "message", "导出任务无法取消，可能已完成或不存在"
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "取消导出任务失败: " + e.getMessage()
+                    ));
+        }
+    }
+    
+    /**
+     * 获取导出文件下载链接
+     * @param exportId 导出任务ID
+     * @return 下载链接
+     */
+    @GetMapping("/exports/{exportId}/download")
+    public ResponseEntity<Map<String, Object>> getDownloadUrl(
+            @PathVariable String exportId) {
+        
+        try {
+            String downloadUrl = exportService.getDownloadUrl(exportId);
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "download_url", downloadUrl
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "获取下载链接失败: " + e.getMessage()
+                    ));
         }
     }
 }

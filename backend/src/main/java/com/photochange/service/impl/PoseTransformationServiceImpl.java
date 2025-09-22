@@ -47,6 +47,62 @@ public class PoseTransformationServiceImpl implements PoseTransformationService 
     private ImageStorageService imageStorageService;
 
     @Override
+    public TransformationResponse createTransformationAsync(String imageId, String templateId, List<Keypoint> customKeypoints) {
+        logger.info("创建异步姿势变换任务，图片ID: {}, 模板ID: {}", imageId, templateId);
+
+        // 验证图片是否存在
+        if (!imageStorageService.imageExists(imageId)) {
+            logger.error("图片不存在，图片ID: {}", imageId);
+            throw new IllegalArgumentException("图片不存在");
+        }
+
+        // 验证模板是否存在
+        PoseTemplate template = templateService.getTemplateById(templateId);
+        if (template == null) {
+            logger.error("模板不存在，模板ID: {}", templateId);
+            throw new IllegalArgumentException("模板不存在");
+        }
+
+        // 生成变换任务ID
+        String transformationId = UUID.randomUUID().toString();
+
+        // 创建初始变换结果
+        TransformationResult initialResult = new TransformationResult(
+                transformationId,
+                imageId,
+                templateId,
+                "processing",
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        initialResult.setCreatedAt(Instant.now().toEpochMilli());
+        transformationResults.put(transformationId, initialResult);
+
+        // 异步处理变换任务
+        CompletableFuture<TransformationResult> future = processTransformation(
+                imageId,
+                templateId,
+                customKeypoints,
+                transformationId
+        );
+        runningTasks.put(transformationId, future);
+
+        // 返回响应
+        return new TransformationResponse(
+                transformationId,
+                imageId,
+                templateId,
+                "processing",
+                "姿势变换任务已创建，正在处理中",
+                10, // 预估处理时间（秒）
+                Instant.now().toEpochMilli()
+        );
+    }
+    
+    @Override
     public TransformationResponse createTransformation(TransformationRequest request) {
         logger.info("创建姿势变换任务，图片ID: {}, 模板ID: {}", request.getImageId(), request.getTemplateId());
 

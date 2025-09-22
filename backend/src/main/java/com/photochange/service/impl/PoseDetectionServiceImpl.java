@@ -34,6 +34,46 @@ public class PoseDetectionServiceImpl implements PoseDetectionService {
     private ImageStorageService imageStorageService;
 
     @Override
+    public PoseDetectionResponse detectPoseAsync(String imageId, String userId) {
+        logger.info("开始异步姿势检测，图片ID: {}, 用户ID: {}", imageId, userId);
+
+        // 验证图片是否存在
+        if (!imageStorageService.imageExists(imageId)) {
+            logger.error("图片不存在，图片ID: {}", imageId);
+            throw new IllegalArgumentException("图片不存在");
+        }
+
+        // 生成检测任务ID
+        String detectionId = UUID.randomUUID().toString();
+
+        // 创建初始检测结果
+        PoseDetectionResult initialResult = new PoseDetectionResult(
+                detectionId,
+                imageId,
+                "processing",
+                null,
+                null,
+                null,
+                Instant.now().toEpochMilli(),
+                null
+        );
+        detectionResults.put(detectionId, initialResult);
+
+        // 异步处理检测任务
+        CompletableFuture<PoseDetectionResult> future = processPoseDetection(imageId, detectionId);
+        runningTasks.put(detectionId, future);
+
+        // 返回响应
+        return new PoseDetectionResponse(
+                detectionId,
+                imageId,
+                "processing",
+                "姿势检测任务已创建，正在处理中",
+                5 // 预估处理时间（秒）
+        );
+    }
+    
+    @Override
     public PoseDetectionResponse detectPose(PoseDetectionRequest request) {
         logger.info("开始姿势检测，图片ID: {}", request.getImageId());
 
